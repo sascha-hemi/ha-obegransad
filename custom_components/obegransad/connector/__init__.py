@@ -165,52 +165,61 @@ class ObegransadConnector:
         scripts/upload.py PlatformIO uploader:
           1. GET  /ota/start?mode=fr&hash=<md5>  - allocates flash space
           2. POST /ota/upload (multipart: MD5 + firmware) - streams the binary
+
+        Uses a dedicated, short-lived ClientSession instead of self._session
+        (Home Assistant's shared session obtained via async_get_clientsession)
+        for the OTA calls specifically. On real hardware, the shared HA
+        session's request - despite an explicit 120s `timeout=` - was
+        observed to abort early with an internal aiohttp TimeoutError while
+        the device was still mid-flash-write (visible in HA's log as a
+        CancelledError surfacing through aiohttp's TimerContext). A plain,
+        isolated session run against the exact same device never
+        reproduced that, matching how this exact protocol was validated in
+        dev/e2e_ota_test_real_release.py.
         """
         auth = BasicAuth(ota_username, ota_password)
 
-        firmware_response = await self._session.get(
-            download_url, timeout=DOWNLOAD_TIMEOUT
-        )
-        if firmware_response.status != 200:
-            raise ObegransadApiException(
-                firmware_response.status, "Failed to download firmware asset"
+        async with ClientSession(timeout=DOWNLOAD_TIMEOUT) as ota_session:
+            firmware_response = await ota_session.get(download_url)
+            if firmware_response.status != 200:
+                raise ObegransadApiException(
+                    firmware_response.status, "Failed to download firmware asset"
+                )
+            firmware_bytes = await firmware_response.read()
+            md5_hash = hashlib.md5(firmware_bytes).hexdigest()
+
+            start_url = OTA_START_URL.format(host=self._host)
+            start_response = await ota_session.get(
+                start_url,
+                params={"mode": "fr", "hash": md5_hash},
+                auth=auth,
             )
-        firmware_bytes = await firmware_response.read()
-        md5_hash = hashlib.md5(firmware_bytes).hexdigest()
+            start_text = await start_response.text()
+            if start_response.status != 200:
+                raise ObegransadApiException(start_response.status, start_text)
 
-        start_url = OTA_START_URL.format(host=self._host)
-        start_response = await self._session.get(
-            start_url,
-            params={"mode": "fr", "hash": md5_hash},
-            auth=auth,
-            timeout=DOWNLOAD_TIMEOUT,
-        )
-        start_text = await start_response.text()
-        if start_response.status != 200:
-            raise ObegransadApiException(start_response.status, start_text)
+            # NOTE: ElegantOTA v3's /ota/upload handler (see ElegantOTA.cpp) only
+            # ever reads the uploaded *file* part - it does not look at a separate
+            # "MD5" form field (the hash is already committed via /ota/start
+            # above). An extra plain-text field ahead of the file part was found,
+            # on real hardware, to confuse ESPAsyncWebServer's multipart parser:
+            # the device wrote only 32 bytes (exactly len(md5_hash)) before
+            # aborting with "Flash Read Failed". Sending only the file part
+            # avoids that.
+            form = FormData()
+            form.add_field(
+                "firmware",
+                firmware_bytes,
+                filename="firmware",
+                content_type="application/octet-stream",
+            )
 
-        # NOTE: ElegantOTA v3's /ota/upload handler (see ElegantOTA.cpp) only ever
-        # reads the uploaded *file* part - it does not look at a separate "MD5"
-        # form field (the hash is already committed via /ota/start above). An
-        # extra plain-text field ahead of the file part was found, on real
-        # hardware, to confuse ESPAsyncWebServer's multipart parser: the device
-        # wrote only 32 bytes (exactly len(md5_hash)) before aborting with
-        # "Flash Read Failed". Sending only the file part avoids that.
-        form = FormData()
-        form.add_field(
-            "firmware",
-            firmware_bytes,
-            filename="firmware",
-            content_type="application/octet-stream",
-        )
-
-        upload_url = OTA_UPLOAD_URL.format(host=self._host)
-        upload_response = await self._session.post(
-            upload_url,
-            data=form,
-            auth=auth,
-            timeout=DOWNLOAD_TIMEOUT,
-        )
-        upload_text = await upload_response.text()
-        if upload_response.status != 200:
-            raise ObegransadApiException(upload_response.status, upload_text)
+            upload_url = OTA_UPLOAD_URL.format(host=self._host)
+            upload_response = await ota_session.post(
+                upload_url,
+                data=form,
+                auth=auth,
+            )
+            upload_text = await upload_response.text()
+            if upload_response.status != 200:
+                raise ObegransadApiException(upload_response.status, upload_text)

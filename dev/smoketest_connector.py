@@ -11,6 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import custom_components.obegransad.connector as connector_module
 from custom_components.obegransad.connector import ObegransadConnector
 from custom_components.obegransad.connector.model import (
     ObegransadFirmwareData,
@@ -32,8 +33,14 @@ class FakeResponse:
 
 
 class FakeSession:
-    def __init__(self):
+    def __init__(self, timeout=None):
         self.calls = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return False
 
     async def get(self, url, **kwargs):
         self.calls.append(("GET", url, kwargs))
@@ -79,6 +86,12 @@ class FakeSession:
 
 async def main():
     session = FakeSession()
+    # install_firmware() opens its own dedicated ClientSession rather than
+    # reusing self._session (see the comment in connector/__init__.py for
+    # why) - patch the module-level import so it hands back the same fake,
+    # keeping every call visible in session.calls.
+    connector_module.ClientSession = lambda **kwargs: session
+
     connector = ObegransadConnector(session, "192.168.1.50")
 
     firmware = await connector.get_firmware_version()
