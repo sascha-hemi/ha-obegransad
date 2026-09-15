@@ -2,13 +2,13 @@
   "domain": "obegransad",
   "name": "Obegränsad",
   "codeowners": [
-    "@PiotrMachowski"
+    "@sascha-hemi"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/PiotrMachowski/Home-Assistant-custom-components-Obegransad",
+  "documentation": "https://github.com/sascha-hemi/ha-obegransad",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/PiotrMachowski/Home-Assistant-custom-components-Obegransad/issues",
+  "issue_tracker": "https://github.com/sascha-hemi/ha-obegransad/issues",
   "requirements": [
   ],
   "version": "0.1.0"
