@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Package and release integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set version in manifest.json
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          python3 - <<PY
+          import json
+          path = "custom_components/obegransad/manifest.json"
+          with open(path) as f:
+              manifest = json.load(f)
+          manifest["version"] = "${version}"
+          with open(path, "w") as f:
+              json.dump(manifest, f, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Zip integration (HACS content_in_root=false layout)
+        run: |
+          cd custom_components/obegransad
+          zip -r ../../obegransad.zip . -x '__pycache__/*'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            Home Assistant "Obegränsad" integration release ${{ github.ref_name }}.
+
+            ## Installation
+            - **HACS**: add this repository as a custom repository (category: Integration),
+              then install "Obegränsad".
+            - **Manual**: download `obegransad.zip` below and extract it to
+              `config/custom_components/obegransad/`.
+          files: obegransad.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,120 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Provide a host",
+        "data": {
+          "host": "Host",
+          "ota_username": "OTA username",
+          "ota_password": "OTA password"
+        },
+        "data_description": {
+          "ota_username": "Used to authenticate firmware updates via ElegantOTA. Defaults to the firmware's built-in default.",
+          "ota_password": "Used to authenticate firmware updates via ElegantOTA. Defaults to the firmware's built-in default."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "single_instance_allowed": "Already configured. Only a single configuration possible.",
+      "cannot_connect": "Failed to connect"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "rows": {
+        "name": "Rows"
+      },
+      "columns": {
+        "name": "Columns"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "plugin": {
+        "name": "Plugin"
+      },
+      "rotation": {
+        "name": "Rotation"
+      },
+      "schedule": {
+        "name": "Schedule",
+        "state_attributes": {
+          "schedule": {
+            "name": "Schedule"
+          }
+        }
+      },
+      "plugins": {
+        "name": "Plugins",
+        "state_attributes": {
+          "plugins": {
+            "name": "Plugins"
+          }
+        }
+      },
+      "brightness": {
+        "name": "Brightness"
+      }
+    },
+    "binary_sensor": {
+      "schedule_active": {
+        "name": "Active schedule",
+        "state_attributes": {
+          "schedule": {
+            "name": "Schedule"
+          }
+        }
+      }
+    },
+    "light": {
+      "light": {
+        "name": ""
+      }
+    },
+    "switch": {
+      "schedule": {
+        "name": "Schedule",
+        "state_attributes": {
+          "schedule": {
+            "name": "Schedule"
+          }
+        }
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    }
+  },
+  "services": {
+    "set_schedule": {
+      "name": "Set schedule",
+      "description": "Sets a schedule of plugins",
+      "fields": {
+        "schedule": {
+          "name": "Schedule",
+          "description": "A list of plugin ids and their duration"
+        }
+      }
+    },
+    "remove_message": {
+      "name": "Remove message",
+      "description": "Removes a repeating message",
+      "fields": {
+        "message_id": {
+          "name": "Message ID",
+          "description": "ID of a message to remove"
+        }
+      }
+    },
+    "clear_storage": {
+      "name": "Clear storage",
+      "description": "Clears the storage"
+    }
+  }
+}

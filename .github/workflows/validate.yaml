@@ -1,0 +1,86 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Re-run weekly so a HACS/hassfest rule change surfaces even without a push.
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Run hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Run HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  python:
+    name: Python syntax / import check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Home Assistant core
+        run: |
+          python -m pip install --upgrade pip
+          pip install homeassistant
+
+      - name: Byte-compile
+        run: python -m py_compile custom_components/obegransad/*.py custom_components/obegransad/connector/*.py
+
+      - name: Import every module against a real Home Assistant install
+        run: |
+          python - <<'PY'
+          import importlib
+
+          modules = [
+              "custom_components.obegransad.const",
+              "custom_components.obegransad.connector.const",
+              "custom_components.obegransad.connector.model",
+              "custom_components.obegransad.connector.exceptions",
+              "custom_components.obegransad.connector",
+              "custom_components.obegransad.coordinator",
+              "custom_components.obegransad.firmware_coordinator",
+              "custom_components.obegransad.typing_helpers",
+              "custom_components.obegransad.entity",
+              "custom_components.obegransad.config_flow",
+              "custom_components.obegransad.update",
+              "custom_components.obegransad.light",
+              "custom_components.obegransad.sensor",
+              "custom_components.obegransad.switch",
+              "custom_components.obegransad.binary_sensor",
+              "custom_components.obegransad.services",
+              "custom_components.obegransad",
+          ]
+          for module in modules:
+              importlib.import_module(module)
+              print("OK", module)
+          PY
+
+      - name: Run connector smoke test
+        run: python dev/smoketest_connector.py
