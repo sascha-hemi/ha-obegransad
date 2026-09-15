@@ -2,9 +2,9 @@
 
 Home Assistant integration for the IKEA OBEGRÄNSAD LED wall lamp, hacked with
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad) (see
-[sascha-hemi/ikea-led-obegraensad](https://github.com/sascha-hemi/ikea-led-obegraensad),
-`esp32s3-ota-integration` branch, for the ESP32-S3-targeted fork this integration was
-built and tested against).
+[sascha-hemi/obegransad-firmware](https://github.com/sascha-hemi/obegransad-firmware)
+for the ESP32-S3-targeted standalone firmware this integration was built and tested
+against).
 
 Built on top of
 [PiotrMachowski/Home-Assistant-custom-components-Obegransad](https://github.com/PiotrMachowski/Home-Assistant-custom-components-Obegransad)'s
@@ -27,8 +27,8 @@ connector/coordinator architecture, extended with a **firmware update entity**.
 ## Requirements
 
 - The lamp must be running a firmware build that exposes `GET /api/version`
-  (present on the `esp32s3-ota-integration` branch linked above; not on stock
-  ph1p `main` yet).
+  (present in the standalone firmware repo linked above; not on stock
+  ph1p `main`).
 - Home Assistant 2024.1 or newer.
 
 ## Installation
