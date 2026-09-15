@@ -64,7 +64,12 @@ class ObegransadFirmwareUpdateEntity(ObegransadEntity, UpdateEntity):
     def installed_version(self: Self) -> str | None:
         if self.coordinator.data is None:
             return None
-        return self.coordinator.data.installed.version
+        # The device's /api/version reports the raw `git describe` output
+        # (e.g. "v1.1.1"), while latest_version below strips the "v" from
+        # the GitHub tag_name - normalize the same way so a version that is
+        # actually identical doesn't show up as "update available" just
+        # because of a "v" prefix mismatch.
+        return self.coordinator.data.installed.version.lstrip("v")
 
     @property
     def latest_version(self: Self) -> str | None:
@@ -100,11 +105,20 @@ class ObegransadFirmwareUpdateEntity(ObegransadEntity, UpdateEntity):
             CONF_OTA_PASSWORD, DEFAULT_OTA_PASSWORD
         )
 
-        await self.coordinator.obegransad_connector.install_firmware(
-            self.coordinator.data.latest.download_url,
-            ota_username,
-            ota_password,
-        )
+        # The device is a single-core ESP32 running a blocking flash write
+        # during OTA. On real hardware, the main device-state coordinator's
+        # normal 10s /api/info poll firing concurrently with an in-progress
+        # OTA upload hung the device mid-write. Pause it for the duration.
+        device_coordinator = self._config_entry.runtime_data.coordinator
+        device_coordinator.ota_in_progress = True
+        try:
+            await self.coordinator.obegransad_connector.install_firmware(
+                self.coordinator.data.latest.download_url,
+                ota_username,
+                ota_password,
+            )
+        finally:
+            device_coordinator.ota_in_progress = False
 
         # The device reboots itself once the flash write finishes; give it a
         # moment before the next poll instead of hammering an offline host.

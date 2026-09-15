@@ -27,8 +27,16 @@ class ObegransadDataUpdateCoordinator(DataUpdateCoordinator[ObegransadDeviceData
         self.obegransad_connector = ObegransadConnector(
             async_get_clientsession(hass), host
         )
+        # Set by update.py around a firmware install. The device is a
+        # single-core ESP32 running a blocking flash write during OTA; on
+        # real hardware, this coordinator's normal 10s /api/info poll
+        # firing concurrently with an in-progress OTA upload was observed
+        # to hang the device mid-write. Skip polling while an install runs.
+        self.ota_in_progress = False
 
     async def update_data(self: Self) -> ObegransadDeviceData:
+        if self.ota_in_progress:
+            return self.data
         try:
             return await self.obegransad_connector.get_data()
         except ObegransadException as err:
