@@ -40,7 +40,12 @@ DEFAULT_OTA_PASSWORD: Final = "ikea-led-wall"
 
 # Repository whose GitHub Releases are polled for firmware updates, and the
 # asset name built for the ESP32-S3 target (see build-and-release.yaml).
-FIRMWARE_GITHUB_REPO: Final = "ph1p/ikea-led-obegraensad"
+#
+# NOTE: pointed at the fork, not upstream ph1p/ikea-led-obegraensad, because
+# the /api/version endpoint this integration relies on only exists on the
+# esp32s3-ota-integration branch/fork for now. Switch this back once (if)
+# that lands upstream.
+FIRMWARE_GITHUB_REPO: Final = "sascha-hemi/ikea-led-obegraensad"
 FIRMWARE_ASSET_NAME: Final = "esp32s3_firmware.bin"
 
 PLATFORMS: list[Platform] = [
